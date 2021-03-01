@@ -4,6 +4,8 @@ import "fmt"
 import "log"
 import "net/rpc"
 import "hash/fnv"
+import "os"
+import "ioutil"
 
 
 //
@@ -34,8 +36,24 @@ func Worker(mapf func(string, string) []KeyValue,
 	// Your worker implementation here.
 
 	// uncomment to send the Example RPC to the coordinator.
-	// CallExample()
+	
+	args := MapArgs{}
+	reply := MapReply{}
 
+	call("Coordinator.MapHandler", &args, &reply)
+	filename := reply.filename
+
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("cannot open %v", filename)
+	}
+	content, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Fatalf("cannot read %v", filename)
+	}
+	file.Close()
+	kva := mapf(filename, string(content))
+	intermediate = append(intermediate, kva...)  // append one slice to another by three dots.
 }
 
 //
@@ -60,6 +78,7 @@ func CallExample() {
 	// reply.Y should be 100.
 	fmt.Printf("reply.Y %v\n", reply.Y)
 }
+
 
 //
 // send an RPC request to the coordinator, wait for the response.

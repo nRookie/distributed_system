@@ -9,7 +9,7 @@ import "net/http"
 
 type Coordinator struct {
 	// Your definitions here.
-
+	filenames map[string]bool
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -24,6 +24,17 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	return nil
 }
 
+func (c *Coordinator) MapHandler(args *MapArgs, reply *MapReply ) error {
+	for filename, used := range c.filenames {
+		if used == false {
+			used = true;
+			reply.filename = filename
+			return nil
+		}
+	}
+
+	return nil
+}
 
 //
 // start a thread that listens for RPCs from worker.go
@@ -61,9 +72,12 @@ func (c *Coordinator) Done() bool {
 //
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
-
+	
 	// Your code here.
-
+	c.filenames = make(map[string]bool)
+	for _, filename := range files {
+		c.filenames[filename] = false
+	}
 
 	c.server()
 	return &c
