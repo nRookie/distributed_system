@@ -6,6 +6,7 @@ import "net/rpc"
 import "hash/fnv"
 import "os"
 import "io/ioutil"
+// import "encoding/json"
 
 
 //
@@ -41,8 +42,8 @@ func Worker(mapf func(string, string) []KeyValue,
 	reply := MapReply{}
 
 	call("Coordinator.MapHandler", &args, &reply)
-	filename := reply.filename
-	intermediate := args.intermediate
+	filename := reply.Filename
+	intermediate := args.Intermediate
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatalf("cannot open %v", filename)
@@ -54,6 +55,24 @@ func Worker(mapf func(string, string) []KeyValue,
 	file.Close()
 	kva := mapf(filename, string(content))
 	intermediate = append(intermediate, kva...)  // append one slice to another by three dots.
+
+	i := 0
+	for i < len(intermediate) {
+		j := i + 1
+		for j < len(intermediate) && intermediate[j].Key == intermediate[i].Key {
+			j++
+		}
+		values := []string{}
+		for k := i; k < j; k++ {
+			values = append(values, intermediate[k].Value)
+		}
+
+		// this is the correct format for each line of Reduce output.
+		fmt.Printf("%v %v\n", intermediate[i].Key,  intermediate[i].Value)
+
+		i = j
+	}
+
 }
 
 //

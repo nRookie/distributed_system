@@ -9,7 +9,15 @@ import "net/http"
 
 type Coordinator struct {
 	// Your definitions here.
-	filenames map[string]bool
+	Filenames map[string]bool
+	ReduceTask	[]int            // 0 idle, 1 in-progress, 2 completed.
+	MapTask		[]int            
+	MapTaskNum  int
+	ReduceTaskNum int
+	MapTaskResult []int
+	CurrentMapTaskNum int
+	CurrentReduceTaskNum int
+	Completed  bool
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -25,13 +33,23 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 }
 
 func (c *Coordinator) MapHandler(args *MapArgs, reply *MapReply ) error {
-	for filename, used := range c.filenames {
-		if used == false {
-			used = true;
-			reply.filename = filename
-			return nil
+	if c.CurrentMapTaskNum < c.MapTaskNum {
+		reply.WorkerID = c.CurrentMapTaskNum
+		c.CurrentMapTaskNum ++
+		for filename, used := range c.Filenames {
+			if used == false {
+				used = true;
+				reply.Filename = filename
+			}
 		}
+	} else if c.CurrentReduceTaskNum < c.ReduceTaskNum {
+		// call reduce worker.
+		reply.WorkerID = c.CurrentReduceTaskNum
+		c.CurrentReduceTaskNum ++
+	} else {
+		c.Completed = true
 	}
+ 
 
 	return nil
 }
@@ -57,7 +75,7 @@ func (c *Coordinator) server() {
 // if the entire job has finished.
 //
 func (c *Coordinator) Done() bool {
-	ret := false
+	ret := c.Completed
 
 	// Your code here.
 
@@ -74,11 +92,18 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 	
 	// Your code here.
-	c.filenames = make(map[string]bool)
+	c.Filenames = make(map[string]bool)
 	for _, filename := range files {
-		c.filenames[filename] = false
+		c.Filenames[filename] = false
 	}
 
+	c.MapTaskNum = len(c.Filenames)
+	c.ReduceTaskNum = nReduce
+	c.MapTask = make([]int, c.MapTaskNum)
+	c.ReduceTask = make([]int, c.ReduceTaskNum)
+	c.Completed = false
+	c.CurrentMapTaskNum = 0
+	c.CurrentReduceTaskNum = 0
 	c.server()
 	return &c
 }

@@ -25,11 +25,12 @@ type ExampleReply struct {
 // Add your RPC definitions here.
 
 type MapArgs struct {
-	intermediate []KeyValue
+	Intermediate []KeyValue
 }
 
 type MapReply struct {
-	filename string 
+	Filename string 
+	WorkerID  int
 }
 
 // Cook up a unique-ish UNIX-domain socket name
