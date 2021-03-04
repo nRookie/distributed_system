@@ -25,7 +25,7 @@ type ExampleReply struct {
 // Add your RPC definitions here.
 
 type MapArgs struct {
-
+	intermediate []KeyValue
 }
 
 type MapReply struct {

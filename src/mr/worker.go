@@ -5,7 +5,7 @@ import "log"
 import "net/rpc"
 import "hash/fnv"
 import "os"
-import "ioutil"
+import "io/ioutil"
 
 
 //
@@ -42,7 +42,7 @@ func Worker(mapf func(string, string) []KeyValue,
 
 	call("Coordinator.MapHandler", &args, &reply)
 	filename := reply.filename
-
+	intermediate := args.intermediate
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatalf("cannot open %v", filename)
