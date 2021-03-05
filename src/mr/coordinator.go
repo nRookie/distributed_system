@@ -33,9 +33,12 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 }
 
 func (c *Coordinator) MapHandler(args *MapArgs, reply *MapReply ) error {
+	reply.ReduceTaskNum = c.ReduceTaskNum
+	reply.MapTaskNum = c.MapTaskNum
 	if c.CurrentMapTaskNum < c.MapTaskNum {
-		reply.WorkerID = c.CurrentMapTaskNum
+		reply.TaskID = c.CurrentMapTaskNum
 		c.CurrentMapTaskNum ++
+		reply.WorkerType = 0
 		for filename, used := range c.Filenames {
 			if used == false {
 				used = true;
@@ -44,11 +47,12 @@ func (c *Coordinator) MapHandler(args *MapArgs, reply *MapReply ) error {
 		}
 	} else if c.CurrentReduceTaskNum < c.ReduceTaskNum {
 		// call reduce worker.
-		reply.WorkerID = c.CurrentReduceTaskNum
+		reply.TaskID = c.CurrentReduceTaskNum
+		reply.WorkerType = 1
 		c.CurrentReduceTaskNum ++
 	} else {
 		c.Completed = true
-		reply.WorkerID = -1 // -1 indicate does not allocate any worker to it.
+		reply.TaskID = -1 // -1 indicate does not allocate any worker to it.
 	}
  
 

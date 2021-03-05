@@ -29,8 +29,11 @@ type MapArgs struct {
 
 type MapReply struct {
 	Filename string 
-	WorkerID  int
+	TaskID  int
 	WorkerType int
+	ReduceTaskNum int
+	MapTaskNum int
+	CurrentReduceTaskNum int
 }
 
 // Cook up a unique-ish UNIX-domain socket name

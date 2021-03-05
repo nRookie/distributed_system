@@ -6,7 +6,7 @@ import "net/rpc"
 import "hash/fnv"
 import "os"
 import "io/ioutil"
-// import "sort"
+import "sort"
 import "encoding/json"
 import "time"
 
@@ -48,81 +48,106 @@ func Worker(mapf func(string, string) []KeyValue,
 	reply := MapReply{}
 
 	call("Coordinator.MapHandler", &args, &reply)
-	for reply.WorkerID == -1 {
+	for reply.TaskID == -1 {
 		// idle
 		time.Sleep(1000)
+		fmt.Printf("i am currently idle")
 	}
 
-	filename := reply.Filename
+	if reply.WorkerType == 0 { // Map worker
+		filename := reply.Filename
 
-	intermediate := []KeyValue{}
+		intermediate := []KeyValue{}
 
-	fmt.Printf("worker: %d reading file:%s", reply.WorkerID, filename)
+		fmt.Printf("worker: %d reading file:%s", reply.TaskID, filename)
 
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Fatalf("cannot open %v", filename)
-	}
-	content, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Fatalf("cannot read %v", filename)
-	}
-	file.Close()
-	kva := mapf(filename, string(content))
-	intermediate = append(intermediate, kva...)  // append one slice to another by three dots.
+		file, err := os.Open(filename)
+		if err != nil {
+			log.Fatalf("cannot open %v", filename)
+		}
+		content, err := ioutil.ReadAll(file)
+		if err != nil {
+			log.Fatalf("cannot read %v", filename)
+		}
+		file.Close()
+		kva := mapf(filename, string(content))
+		intermediate = append(intermediate, kva...)  // append one slice to another by three dots.
 
-	// i := 0
-	// for i < len(intermediate) {
-	// 	j := i + 1
-	// 	for j < len(intermediate) && intermediate[j].Key == intermediate[i].Key {
-	// 		j++
-	// 	}
-	// 	values := []string{}
-	// 	for k := i; k < j; k++ {
-	// 		values = append(values, intermediate[k].Value)
-	// 	}
+		for _, kv := range intermediate {
+			oname := fmt.Sprintf("mr-%d-%d", reply.TaskID, ihash(kv.Key) % reply.ReduceTaskNum) // 10 change to total reduce task number
 
-	// 	// this is the correct format for each line of Reduce output.
-	// 	fmt.Printf("%v %v\n", intermediate[i].Key,  intermediate[i].Value)
+			if _, err := os.Stat(oname); err == nil {
 
-	// 	i = j
-	// }
-	// sort.Sort(ByKey(intermediate))
+				if err != nil {
+					fmt.Println("failed to save the intermediate file open")
+					fmt.Println(err)
+					return 
+				}
 
+				ofile, _ := os.OpenFile(oname,os.O_APPEND | os.O_WRONLY, os.ModeAppend)
+				enc := json.NewEncoder(ofile)
+				err := enc.Encode(&kv)
+				if err != nil {
+					fmt.Println("failed to save the intermediate file encode")
+					fmt.Println(err)
+					return 
+				}
 
- 
+			} else {
+				ofile, _ := os.Create(oname)
+				enc := json.NewEncoder(ofile)
+				err := enc.Encode(&kv)
+				if err != nil {
+					fmt.Println("failed to save the intermediate file create")
+					fmt.Println(err)
+					return 
+				}
+			}
+		}
+	} else { // Reduce worker
 
-	for _, kv := range intermediate {
-		oname := fmt.Sprintf("mr-%d-%d", reply.WorkerID, ihash(kv.Key) % 10) // 10 change to total reduce task number
-
-		if _, err := os.Stat(oname); err == nil {
-
-			if err != nil {
-				fmt.Println("failed to save the intermediate file open")
-				fmt.Println(err)
-				return 
+			// read all the content from different mr file into intermediate
+			intermediate := []KeyValue{}
+			for j:= 0; j < reply.MapTaskNum; j++ {
+				oname := fmt.Sprintf("mr-%d-%d", j, reply.TaskID);
+				ofile, _ := os.OpenFile(oname,os.O_APPEND | os.O_WRONLY, os.ModeAppend)
+				dec := json.NewDecoder(ofile)
+				for {
+				  var kv KeyValue
+				  if err := dec.Decode(&kv); err != nil {
+					break
+				  }
+				  intermediate = append(intermediate, kv)
+				}
+				ofile.Close()
 			}
 
-			ofile, _ := os.OpenFile(oname,os.O_APPEND | os.O_WRONLY, os.ModeAppend)
-			enc := json.NewEncoder(ofile)
-			err := enc.Encode(&kv)
-			if err != nil {
-				fmt.Println("failed to save the intermediate file encode")
-				fmt.Println(err)
-				return 
-			}
+			// sort it by key
+			sort.Sort(ByKey(intermediate))
 
-		  } else {
-			ofile, _ := os.Create(oname)
-			enc := json.NewEncoder(ofile)
-			err := enc.Encode(&kv)
-			if err != nil {
-				fmt.Println("failed to save the intermediate file create")
-				fmt.Println(err)
-				return 
+
+			res_name := fmt.Sprintf("mr-out-%d", reply.TaskID);
+			res_file, _ := os.Create(res_name)
+			i := 0
+			for i < len(intermediate) {
+				j := i + 1
+				for j < len(intermediate) && intermediate[j].Key == intermediate[i].Key {
+					j++
+				}
+				values := []string{}
+				for k := i; k < j; k++ {
+					values = append(values, intermediate[k].Value)
+				}
+				output := reducef(intermediate[i].Key, values)
+		
+				// this is the correct format for each line of Reduce output.
+				fmt.Fprintf(res_file, "%v %v\n", intermediate[i].Key, output)
+		
+				i = j
 			}
-		  }
+			res_file.Close()
 	}
+
 }
 
  
