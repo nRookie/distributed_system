@@ -5,6 +5,8 @@ import "net"
 import "os"
 import "net/rpc"
 import "net/http"
+import "sync"
+import "fmt"
 
 
 type Coordinator struct {
@@ -18,6 +20,7 @@ type Coordinator struct {
 	CurrentMapTaskNum int
 	CurrentReduceTaskNum int
 	Completed  bool
+	mu   sync.Mutex
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -33,6 +36,8 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 }
 
 func (c *Coordinator) MapHandler(args *MapArgs, reply *MapReply ) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	reply.ReduceTaskNum = c.ReduceTaskNum
 	reply.MapTaskNum = c.MapTaskNum
 	if c.CurrentMapTaskNum < c.MapTaskNum {
@@ -41,8 +46,10 @@ func (c *Coordinator) MapHandler(args *MapArgs, reply *MapReply ) error {
 		reply.WorkerType = 0
 		for filename, used := range c.Filenames {
 			if used == false {
-				used = true;
+				c.Filenames[filename] = true
+				fmt.Printf("serve %s filename status:%t", filename, c.Filenames[filename])
 				reply.Filename = filename
+				return nil
 			}
 		}
 	} else if c.CurrentReduceTaskNum < c.ReduceTaskNum {
@@ -101,7 +108,9 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	for _, filename := range files {
 		c.Filenames[filename] = false
 	}
-
+	for filename, used := range c.Filenames {
+		fmt.Printf("%s , %t \n", filename, used)
+	}
 	c.MapTaskNum = len(c.Filenames)
 	c.ReduceTaskNum = nReduce
 	c.MapTask = make([]int, c.MapTaskNum)
