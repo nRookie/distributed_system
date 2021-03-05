@@ -8,7 +8,7 @@ import "os"
 import "io/ioutil"
 // import "sort"
 import "encoding/json"
-
+import "time"
 
 //
 // Map functions return a slice of KeyValue.
@@ -48,7 +48,13 @@ func Worker(mapf func(string, string) []KeyValue,
 	reply := MapReply{}
 
 	call("Coordinator.MapHandler", &args, &reply)
+	for reply.WorkerID == -1 {
+		// idle
+		time.Sleep(1000)
+	}
+
 	filename := reply.Filename
+
 	intermediate := []KeyValue{}
 
 	fmt.Printf("worker: %d reading file:%s", reply.WorkerID, filename)
@@ -82,18 +88,44 @@ func Worker(mapf func(string, string) []KeyValue,
 	// 	i = j
 	// }
 	// sort.Sort(ByKey(intermediate))
-	oname := fmt.Sprintf("mr-%d", reply.WorkerID)
-	ofile, _ := os.Create(oname)
-	enc := json.NewEncoder(ofile)
+
+
+ 
+
 	for _, kv := range intermediate {
-	  err := enc.Encode(&kv)
-	  if err != nil {
-		  fmt.Println("failed to save the intermediate file")
-		  return 
-	  }
+		oname := fmt.Sprintf("mr-%d-%d", reply.WorkerID, ihash(kv.Key) % 10) // 10 change to total reduce task number
+
+		if _, err := os.Stat(oname); err == nil {
+
+			if err != nil {
+				fmt.Println("failed to save the intermediate file open")
+				fmt.Println(err)
+				return 
+			}
+
+			ofile, _ := os.OpenFile(oname,os.O_APPEND | os.O_WRONLY, os.ModeAppend)
+			enc := json.NewEncoder(ofile)
+			err := enc.Encode(&kv)
+			if err != nil {
+				fmt.Println("failed to save the intermediate file encode")
+				fmt.Println(err)
+				return 
+			}
+
+		  } else {
+			ofile, _ := os.Create(oname)
+			enc := json.NewEncoder(ofile)
+			err := enc.Encode(&kv)
+			if err != nil {
+				fmt.Println("failed to save the intermediate file create")
+				fmt.Println(err)
+				return 
+			}
+		  }
 	}
 }
 
+ 
 //
 // example function to show how to make an RPC call to the coordinator.
 //

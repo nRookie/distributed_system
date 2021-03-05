@@ -48,6 +48,7 @@ func (c *Coordinator) MapHandler(args *MapArgs, reply *MapReply ) error {
 		c.CurrentReduceTaskNum ++
 	} else {
 		c.Completed = true
+		reply.WorkerID = -1 // -1 indicate does not allocate any worker to it.
 	}
  
 
