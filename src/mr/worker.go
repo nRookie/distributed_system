@@ -95,11 +95,14 @@ func Worker(mapf func(string, string) []KeyValue,
 			intermediate := []KeyValue{}
 			for j:= 0; j < reply.MapTaskNum; j++ {
 				oname := fmt.Sprintf("mr-%d-%d", j, reply.TaskID);
-				ofile, _ := os.OpenFile(oname,os.O_APPEND | os.O_WRONLY, os.ModeAppend)
+				fmt.Println(oname)
+				ofile, _ := os.Open(oname)
 				dec := json.NewDecoder(ofile)
 				for {
 				  var kv KeyValue
 				  if err := dec.Decode(&kv); err != nil {
+					fmt.Println("failed to read content")
+					fmt.Println(err)
 					break
 				  }
 				  intermediate = append(intermediate, kv)
@@ -109,7 +112,6 @@ func Worker(mapf func(string, string) []KeyValue,
 
 			// sort it by key
 			sort.Sort(ByKey(intermediate))
-
 
 			res_name := fmt.Sprintf("mr-out-%d", reply.TaskID);
 			res_file, _ := os.Create(res_name)
@@ -123,6 +125,7 @@ func Worker(mapf func(string, string) []KeyValue,
 				for k := i; k < j; k++ {
 					values = append(values, intermediate[k].Value)
 				}
+				fmt.Printf("current file key is %v, i is %v, j is %v", intermediate[i].Key, i, j)
 				output := reducef(intermediate[i].Key, values)
 		
 				// this is the correct format for each line of Reduce output.
