@@ -58,7 +58,6 @@ func Worker(mapf func(string, string) []KeyValue,
 		filename := reply.Filename
 
 		intermediate := []KeyValue{}
-
 		fmt.Printf("worker: %d reading file:%s", reply.TaskID, filename)
 
 		file, err := os.Open(filename)
@@ -73,35 +72,21 @@ func Worker(mapf func(string, string) []KeyValue,
 		kva := mapf(filename, string(content))
 		intermediate = append(intermediate, kva...)  // append one slice to another by three dots.
 
+		file_list := []*os.File{}
+
+		for i := 0; i < reply.ReduceTaskNum; i ++ {
+			oname := fmt.Sprintf("mr-%d-%d", reply.TaskID, i)
+			ofile, _ := os.Create(oname)
+			file_list = append(file_list, ofile)
+		}
 		for _, kv := range intermediate {
-			oname := fmt.Sprintf("mr-%d-%d", reply.TaskID, ihash(kv.Key) % reply.ReduceTaskNum) // 10 change to total reduce task number
-
-			if _, err := os.Stat(oname); err == nil {
-
-				if err != nil {
-					fmt.Println("failed to save the intermediate file open")
-					fmt.Println(err)
-					return 
-				}
-
-				ofile, _ := os.OpenFile(oname,os.O_APPEND | os.O_WRONLY, os.ModeAppend)
-				enc := json.NewEncoder(ofile)
-				err := enc.Encode(&kv)
-				if err != nil {
-					fmt.Println("failed to save the intermediate file encode")
-					fmt.Println(err)
-					return 
-				}
-
-			} else {
-				ofile, _ := os.Create(oname)
-				enc := json.NewEncoder(ofile)
-				err := enc.Encode(&kv)
-				if err != nil {
-					fmt.Println("failed to save the intermediate file create")
-					fmt.Println(err)
-					return 
-				}
+			file_num := ihash(kv.Key) % reply.ReduceTaskNum
+			enc := json.NewEncoder(file_list[file_num])
+			err := enc.Encode(&kv)
+			if err != nil {
+				fmt.Println("failed to save the intermediate file encode")
+				fmt.Println(err)
+				return 
 			}
 		}
 	} else { // Reduce worker
