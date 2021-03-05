@@ -6,7 +6,8 @@ import "net/rpc"
 import "hash/fnv"
 import "os"
 import "io/ioutil"
-// import "encoding/json"
+// import "sort"
+import "encoding/json"
 
 
 //
@@ -17,7 +18,12 @@ type KeyValue struct {
 	Value string
 }
 
-//
+type ByKey []KeyValue
+func (a ByKey) Len() int           { return len(a) }
+func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
+
+
 // use ihash(key) % NReduce to choose the reduce
 // task number for each KeyValue emitted by Map.
 //
@@ -43,7 +49,10 @@ func Worker(mapf func(string, string) []KeyValue,
 
 	call("Coordinator.MapHandler", &args, &reply)
 	filename := reply.Filename
-	intermediate := args.Intermediate
+	intermediate := []KeyValue{}
+
+	fmt.Printf("worker: %d reading file:%s", reply.WorkerID, filename)
+
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatalf("cannot open %v", filename)
@@ -56,23 +65,33 @@ func Worker(mapf func(string, string) []KeyValue,
 	kva := mapf(filename, string(content))
 	intermediate = append(intermediate, kva...)  // append one slice to another by three dots.
 
-	i := 0
-	for i < len(intermediate) {
-		j := i + 1
-		for j < len(intermediate) && intermediate[j].Key == intermediate[i].Key {
-			j++
-		}
-		values := []string{}
-		for k := i; k < j; k++ {
-			values = append(values, intermediate[k].Value)
-		}
+	// i := 0
+	// for i < len(intermediate) {
+	// 	j := i + 1
+	// 	for j < len(intermediate) && intermediate[j].Key == intermediate[i].Key {
+	// 		j++
+	// 	}
+	// 	values := []string{}
+	// 	for k := i; k < j; k++ {
+	// 		values = append(values, intermediate[k].Value)
+	// 	}
 
-		// this is the correct format for each line of Reduce output.
-		fmt.Printf("%v %v\n", intermediate[i].Key,  intermediate[i].Value)
+	// 	// this is the correct format for each line of Reduce output.
+	// 	fmt.Printf("%v %v\n", intermediate[i].Key,  intermediate[i].Value)
 
-		i = j
+	// 	i = j
+	// }
+	// sort.Sort(ByKey(intermediate))
+	oname := fmt.Sprintf("mr-%d", reply.WorkerID)
+	ofile, _ := os.Create(oname)
+	enc := json.NewEncoder(ofile)
+	for _, kv := range intermediate {
+	  err := enc.Encode(&kv)
+	  if err != nil {
+		  fmt.Println("failed to save the intermediate file")
+		  return 
+	  }
 	}
-
 }
 
 //
