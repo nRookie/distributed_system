@@ -90,9 +90,19 @@ func (c *Coordinator) Done() bool {
 	ret := c.Completed
 
 	// Your code here.
-
+	
 
 	return ret
+}
+
+// reduce worker use this to poll if reduce worker can start
+func (c *Coordinator) Poll() bool {
+	return true
+}
+
+// Map worker use this method to tell reduce worker how many map task has finshied
+func (c *Coordinator) indicate() bool {
+	return true
 }
 
 //

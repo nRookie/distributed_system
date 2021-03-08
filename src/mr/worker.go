@@ -89,6 +89,11 @@ func Worker(mapf func(string, string) []KeyValue,
 						return 
 					}
 				}
+
+				args = MapArgs{}
+				reply = MapReply{}
+	
+				call("Coordinator.Done", &args, &reply)
 			} else { // Reduce worker
 
 					// read all the content from different mr file into intermediate
