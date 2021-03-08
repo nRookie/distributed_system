@@ -88,6 +88,8 @@ func (c *Coordinator) server() {
 // if the entire job has finished.
 //
 func (c *Coordinator) Done() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	ret := c.Completed
 
 	// Your code here.
@@ -98,6 +100,8 @@ func (c *Coordinator) Done() bool {
 
 // reduce worker use this to poll if reduce worker can start
 func (c *Coordinator) Poll(args *PollArgs, reply *PollReply ) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.CompletedMapTaskNum == c.MapTaskNum {
 		reply.Finished = true
 	} else {
@@ -108,6 +112,8 @@ func (c *Coordinator) Poll(args *PollArgs, reply *PollReply ) error {
 
 // Map worker use this method to tell coordinator how many map task has finshied
 func (c *Coordinator) Indicate(args *PollArgs, reply *PollReply ) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.CompletedMapTaskNum ++
 	return nil
 }
