@@ -36,10 +36,11 @@ type MapReply struct {
 	CurrentReduceTaskNum int
 }
 
-type DoneArgs struct {
+type PollArgs struct {
 }
 
-type DoneReply struct {
+type PollReply struct {
+	Finished bool
 }
 
 // Cook up a unique-ish UNIX-domain socket name

@@ -19,6 +19,7 @@ type Coordinator struct {
 	MapTaskResult []int
 	CurrentMapTaskNum int
 	CurrentReduceTaskNum int
+	CompletedMapTaskNum int
 	Completed  bool
 	mu   sync.Mutex
 }
@@ -35,7 +36,7 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	return nil
 }
 
-func (c *Coordinator) MapHandler(args *MapArgs, reply *MapReply ) error {
+func (c *Coordinator) MapReduceHandler(args *MapArgs, reply *MapReply ) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	reply.ReduceTaskNum = c.ReduceTaskNum
@@ -96,13 +97,19 @@ func (c *Coordinator) Done() bool {
 }
 
 // reduce worker use this to poll if reduce worker can start
-func (c *Coordinator) Poll() bool {
-	return true
+func (c *Coordinator) Poll(args *PollArgs, reply *PollReply ) error {
+	if c.CompletedMapTaskNum == c.MapTaskNum {
+		reply.Finished = true
+	} else {
+		reply.Finished = false
+	}
+	return nil
 }
 
-// Map worker use this method to tell reduce worker how many map task has finshied
-func (c *Coordinator) indicate() bool {
-	return true
+// Map worker use this method to tell coordinator how many map task has finshied
+func (c *Coordinator) Indicate(args *PollArgs, reply *PollReply ) error {
+	c.CompletedMapTaskNum ++
+	return nil
 }
 
 //

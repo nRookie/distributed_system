@@ -42,23 +42,23 @@ func Worker(mapf func(string, string) []KeyValue,
 
 	// Your worker implementation here.
 
-	// uncomment to send the Example RPC to the coordinator.
-	for {
-			args := MapArgs{}
-			reply := MapReply{}
 
-			call("Coordinator.MapHandler", &args, &reply)
-			for reply.TaskID == -1 {
+	for {
+			mapArgs := MapArgs{}
+			mapReply := MapReply{}
+
+			call("Coordinator.MapReduceHandler", &mapArgs, &mapReply)
+			for mapReply.TaskID == -1 {
 				// idle
 				time.Sleep(1000)
 				fmt.Printf("i am currently idle")
 			}
 
-			if reply.WorkerType == 0 { // Map worker
-				filename := reply.Filename
+			if mapReply.WorkerType == 0 { // Map worker
+				filename := mapReply.Filename
 
 				intermediate := []KeyValue{}
-				fmt.Printf("worker: %d reading file:%s", reply.TaskID, filename)
+				fmt.Printf("worker: %d reading file:%s", mapReply.TaskID, filename)
 
 				file, err := os.Open(filename)
 				if err != nil {
@@ -74,13 +74,13 @@ func Worker(mapf func(string, string) []KeyValue,
 
 				file_list := []*os.File{}
 
-				for i := 0; i < reply.ReduceTaskNum; i ++ {
-					oname := fmt.Sprintf("mr-%d-%d", reply.TaskID, i)
+				for i := 0; i < mapReply.ReduceTaskNum; i ++ {
+					oname := fmt.Sprintf("mr-%d-%d", mapReply.TaskID, i)
 					ofile, _ := os.Create(oname)
 					file_list = append(file_list, ofile)
 				}
 				for _, kv := range intermediate {
-					file_num := ihash(kv.Key) % reply.ReduceTaskNum
+					file_num := ihash(kv.Key) % mapReply.ReduceTaskNum
 					enc := json.NewEncoder(file_list[file_num])
 					err := enc.Encode(&kv)
 					if err != nil {
@@ -90,16 +90,23 @@ func Worker(mapf func(string, string) []KeyValue,
 					}
 				}
 
-				args = MapArgs{}
-				reply = MapReply{}
+				args := MapArgs{}
+				reply := MapReply{}
 	
-				call("Coordinator.Done", &args, &reply)
+				call("Coordinator.Indicate", &args, &reply)
 			} else { // Reduce worker
-
+					pollArgs := PollArgs{}
+					pollReply := PollReply{}
+					for {
+						call("Coordinator.Poll", &pollArgs, &pollReply)
+						if pollReply.Finished {
+							break 
+						}
+					}
 					// read all the content from different mr file into intermediate
 					intermediate := []KeyValue{}
-					for j:= 0; j < reply.MapTaskNum; j++ {
-						oname := fmt.Sprintf("mr-%d-%d", j, reply.TaskID);
+					for j:= 0; j < mapReply.MapTaskNum; j++ {
+						oname := fmt.Sprintf("mr-%d-%d", j, mapReply.TaskID);
 						fmt.Println(oname)
 						ofile, _ := os.Open(oname)
 						dec := json.NewDecoder(ofile)
@@ -118,7 +125,7 @@ func Worker(mapf func(string, string) []KeyValue,
 					// sort it by key
 					sort.Sort(ByKey(intermediate))
 
-					res_name := fmt.Sprintf("mr-out-%d", reply.TaskID);
+					res_name := fmt.Sprintf("mr-out-%d", mapReply.TaskID);
 					res_file, _ := os.Create(res_name)
 					i := 0
 					for i < len(intermediate) {
