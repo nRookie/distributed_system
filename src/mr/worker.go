@@ -111,13 +111,11 @@ func Worker(mapf func(string, string) []KeyValue,
 						ofile, _ := os.Open(oname)
 						dec := json.NewDecoder(ofile)
 						for {
-						var kv KeyValue
-						if err := dec.Decode(&kv); err != nil {
-							fmt.Println("failed to read content")
-							fmt.Println(err)
-							break
-						}
-						intermediate = append(intermediate, kv)
+							var kv KeyValue
+							if err := dec.Decode(&kv); err != nil {
+								break
+							}
+							intermediate = append(intermediate, kv)
 						}
 						ofile.Close()
 					}
