@@ -51,7 +51,6 @@ func Worker(mapf func(string, string) []KeyValue,
 			for mapReply.TaskID == -1 {
 				// idle
 				time.Sleep(1000)
-				fmt.Printf("i am currently idle")
 			}
 
 			if mapReply.WorkerType == 0 { // Map worker
@@ -90,10 +89,11 @@ func Worker(mapf func(string, string) []KeyValue,
 					}
 				}
 
-				args := MapArgs{}
-				reply := MapReply{}
-	
+				args := PollArgs{}
+				reply := PollReply{}
+
 				call("Coordinator.Indicate", &args, &reply)
+
 			} else { // Reduce worker
 					pollArgs := PollArgs{}
 					pollReply := PollReply{}
@@ -137,7 +137,7 @@ func Worker(mapf func(string, string) []KeyValue,
 						for k := i; k < j; k++ {
 							values = append(values, intermediate[k].Value)
 						}
-						fmt.Printf("current file key is %v, i is %v, j is %v", intermediate[i].Key, i, j)
+						// fmt.Printf("current file key is %v, i is %v, j is %v", intermediate[i].Key, i, j)
 						output := reducef(intermediate[i].Key, values)
 				
 						// this is the correct format for each line of Reduce output.
