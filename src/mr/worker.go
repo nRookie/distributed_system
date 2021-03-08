@@ -47,7 +47,10 @@ func Worker(mapf func(string, string) []KeyValue,
 			mapArgs := MapArgs{}
 			mapReply := MapReply{}
 
-			call("Coordinator.MapReduceHandler", &mapArgs, &mapReply)
+			valid := call("Coordinator.MapReduceHandler", &mapArgs, &mapReply)
+			if valid == false {
+				return
+			}
 			for mapReply.TaskID == -1 {
 				// idle
 				time.Sleep(1000)
