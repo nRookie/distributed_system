@@ -11,9 +11,7 @@ import "fmt"
 
 type Coordinator struct {
 	// Your definitions here.
-	Filenames map[string]bool
-	ReduceTask	[]int            // 0 idle, 1 in-progress, 2 completed.
-	MapTask		[]int            
+	Filenames map[string]bool   //// 0 idle, 1 in-progress, 2 completed.
 	MapTaskNum  int
 	ReduceTaskNum int
 	MapTaskResult []int
@@ -136,8 +134,6 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	}
 	c.MapTaskNum = len(c.Filenames)
 	c.ReduceTaskNum = nReduce
-	c.MapTask = make([]int, c.MapTaskNum)
-	c.ReduceTask = make([]int, c.ReduceTaskNum)
 	c.Completed = false
 	c.CurrentMapTaskNum = 0
 	c.CurrentReduceTaskNum = 0
