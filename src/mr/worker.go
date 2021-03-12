@@ -75,8 +75,7 @@ func doMap(reply *MapReduceReply ,mapf func(string, string) []KeyValue ) {
 		}
 	}
 
-	argsFinish := MapReduceArgs{MessageType: FinishTask}
-
+	argsFinish := MapReduceArgs{MessageType: FinishTask,Task: task}
 
 	res := call("Coordinator.WorkerCallHandler", &argsFinish, &reply)
 	fmt.Printf("MAPtask: %d reading file:%s completed\n", task.Index, filename)

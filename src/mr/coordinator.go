@@ -58,9 +58,9 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 				// fmt.Printf("timeout is %f \n", time.Since(task.Timestamp).Seconds())
 				if (task.Status == 0 || (task.Status == 1 && (time.Since(task.Timestamp).Seconds()  > 300 ))) {
 					c.mapTasks[i].Status = 1
-					c.mapTasks[i].Type ="Map"
+					c.mapTasks[i].Type = "Map"
 					c.mapTasks[i].Timestamp = time.Now()
-					reply.Task = task
+					reply.Task = c.mapTasks[i]
 					reply.NReduce = c.nReduce
 					// fmt.Printf("%d %d", task.Status, c.mapTasks[task.Index].Status )
 					return nil
@@ -77,7 +77,7 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 					c.reduceTasks[i].Status = 1
 					c.reduceTasks[i].Type ="Reduce"
 					c.reduceTasks[i].Timestamp = time.Now()
-					reply.Task = task
+					reply.Task = c.reduceTasks[i]
 					return nil
 				}
 			}
@@ -89,11 +89,13 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 	} else { // Finished Task
 		task := args.Task
 		// check if the worker is the last worker who we assigned the task.
-		if (task.Status == 1 && time.Since(task.Timestamp).Seconds() < 300) {
-	
+		fmt.Printf("task type is :%s\n", task.Type)
+		if (task.Status == 1 && (time.Since(task.Timestamp).Seconds() < 300) ) {
+			fmt.Printf("task type is :%s %s\n", task.Type, "Map")
 			if task.Type == "Map" {
 				c.mapTasks[task.Index].Status = 2
 				// TODO: need to use temporary file name
+				fmt.Printf("map task finished %d\n", task.Index );
 				for _ , filename := range task.ReduceFiles {
 					s := strings.Split(filename, "-")
 					index, err := strconv.Atoi(s[2])
@@ -111,14 +113,17 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 		for _, task := range c.mapTasks {
 			if (task.Status != 2) {
 				c.mapFinished = false 
+				fmt.Printf("FINISHEDTASK: %d unfinished %d\n",task.Index, task.Status  )
 			}
 		}
 		c.reduceFinished = true
 		for _, task := range c.reduceTasks {
 			if (task.Status != 2) {
 				c.reduceFinished = false
+				fmt.Printf("FINISHEDTASK: reduce %d unfinished  %d\n",task.Index, task.Status   )
 			} 
 		}
+ 
 	}
 	return nil
 }
