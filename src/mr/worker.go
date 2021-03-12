@@ -58,10 +58,13 @@ func doMap(reply *MapReduceReply ,mapf func(string, string) []KeyValue ) {
 	files := []*os.File{} // declare a list of file pointers
 
 	for i := 0; i < reply.NReduce ; i ++ {
-		oname := fmt.Sprintf("mr-%d-%d", task.Index, i)
-		ofile, _ := os.Create(oname)
-		files = append(files, ofile)
-		task.ReduceFiles = append(task.ReduceFiles, oname) // append the filenames  into reduce file list
+		oname := fmt.Sprintf("mr-%d-%d-", task.Index, i)
+		tmpfile, err := ioutil.TempFile("", oname)
+		if err != nil {
+			log.Fatalf("cannot create tmp file %v", tmpfile)
+		}
+		files = append(files, tmpfile)
+		task.ReduceFiles = append(task.ReduceFiles, tmpfile.Name()) // append the filenames  into reduce file list
 	}
 
 	for _, kv := range intermediate {

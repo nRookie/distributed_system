@@ -102,7 +102,9 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 					if err != nil {
 						log.Fatalf("failed to convert %s to integer ", s[2])
 					}
-					c.reduceTasks[index].ReduceFiles = append(c.reduceTasks[index].ReduceFiles, filename)
+					newName := fmt.Sprintf("%s-%s-%s", s[0], s[1], s[2]);
+					os.Rename(filename, newName)
+					c.reduceTasks[index].ReduceFiles = append(c.reduceTasks[index].ReduceFiles, newName)
 				}
 			} else if task.Type == "Reduce" {
 				c.reduceTasks[task.Index].Status = 2
