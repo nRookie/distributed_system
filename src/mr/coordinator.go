@@ -13,6 +13,7 @@ type Coordinator struct {
 	// Your definitions here.
 	MapTasks map[string]int   //// 0 idle, 1 in-progress, 2 completed.
 	MapTaskNum  int
+	ReduceTasks map[int]int
 	ReduceTaskNum int
 	MapTaskResult []int
 	CurrentMapTaskNum int
@@ -127,6 +128,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	
 	// Your code here.
 	c.MapTasks = make(map[string]int)
+	// make every map task status as un assigned.
 	for _, filename := range files {
 		c.MapTasks[filename] = 0
 	}
@@ -135,6 +137,10 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	}
 	c.MapTaskNum = len(c.MapTasks)
 	c.ReduceTaskNum = nReduce
+	//make every reduce tasks as unassigned.
+	for i := 0; i < nReduce; i ++ {
+		c.ReduceTasks[i] = 0
+	}
 	c.Completed = false
 	c.CurrentMapTaskNum = 0
 	c.CurrentReduceTaskNum = 0
