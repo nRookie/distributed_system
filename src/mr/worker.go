@@ -38,6 +38,7 @@ func doMap(reply *MapReduceReply ,mapf func(string, string) []KeyValue ) {
 	intermediate := []KeyValue{}
 
 	file, err := os.Open(filename)
+	fmt.Printf("MAPtask: %d reading file:%s\n", task.Index, filename)
 
 	if err != nil {
 		log.Fatalf("cannot open %v", filename)
@@ -78,7 +79,7 @@ func doMap(reply *MapReduceReply ,mapf func(string, string) []KeyValue ) {
 
 
 	res := call("Coordinator.WorkerCallHandler", &argsFinish, &reply)
-
+	fmt.Printf("MAPtask: %d reading file:%s completed\n", task.Index, filename)
 	if res == false {
 		return 
 	}
@@ -87,6 +88,7 @@ func doMap(reply *MapReduceReply ,mapf func(string, string) []KeyValue ) {
 func doReduce(reply *MapReduceReply, reducef func(string, []string) string) {
 	intermediate := []KeyValue{}
 	task := reply.Task
+	fmt.Printf("REDUCETASK: %d\n", task.Index)
 	for _, filename := range task.ReduceFiles {
 		ofile, _ := os.Open(filename)
 		dec := json.NewDecoder(ofile)

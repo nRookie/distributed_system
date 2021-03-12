@@ -55,14 +55,14 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 		if (c.mapFinished == false) {
 
 			for i, task := range c.mapTasks {
-				fmt.Printf("timeout is %f \n", time.Since(task.Timestamp).Seconds())
-				if (task.Status == 0 || (task.Status == 1 && (time.Since(task.Timestamp).Seconds()  > 120 ))) {
+				// fmt.Printf("timeout is %f \n", time.Since(task.Timestamp).Seconds())
+				if (task.Status == 0 || (task.Status == 1 && (time.Since(task.Timestamp).Seconds()  > 300 ))) {
 					c.mapTasks[i].Status = 1
 					c.mapTasks[i].Type ="Map"
 					c.mapTasks[i].Timestamp = time.Now()
 					reply.Task = task
 					reply.NReduce = c.nReduce
-					fmt.Printf("%d %d", task.Status, c.mapTasks[task.Index].Status )
+					// fmt.Printf("%d %d", task.Status, c.mapTasks[task.Index].Status )
 					return nil
 				}
 			}
@@ -73,7 +73,7 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 			return nil
 		} else if c.reduceFinished == false {
 			for i, task := range c.reduceTasks {
-				if task.Status == 0 || (task.Status == 1 && time.Since(task.Timestamp).Seconds()  > 120) {
+				if task.Status == 0 || (task.Status == 1 && time.Since(task.Timestamp).Seconds()  > 300 ) {
 					c.reduceTasks[i].Status = 1
 					c.reduceTasks[i].Type ="Reduce"
 					c.reduceTasks[i].Timestamp = time.Now()
@@ -89,9 +89,10 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 	} else { // Finished Task
 		task := args.Task
 		// check if the worker is the last worker who we assigned the task.
-		if (task.Status == 1 && time.Since(task.Timestamp).Seconds() < 10) {
-			task.Status = 2
+		if (task.Status == 1 && time.Since(task.Timestamp).Seconds() < 300) {
+	
 			if task.Type == "Map" {
+				c.mapTasks[task.Index].Status = 2
 				// TODO: need to use temporary file name
 				for _ , filename := range task.ReduceFiles {
 					s := strings.Split(filename, "-")
@@ -101,6 +102,8 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 					}
 					c.reduceTasks[index].ReduceFiles = append(c.reduceTasks[index].ReduceFiles, filename)
 				}
+			} else if task.Type == "Reduce" {
+				c.reduceTasks[task.Index].Status = 2
 			}
 		}
 
