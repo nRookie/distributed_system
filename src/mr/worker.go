@@ -8,6 +8,7 @@ import "time"
 import "os"
 import "encoding/json"
 import "io/ioutil"
+import "sort"
 //
 // Map functions return a slice of KeyValue.
 //
@@ -16,6 +17,10 @@ type KeyValue struct {
 	Value string
 }
 
+type ByKey []KeyValue
+func (a ByKey) Len() int           { return len(a) }
+func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 //
 // use ihash(key) % NReduce to choose the reduce
 // task number for each KeyValue emitted by Map.
@@ -80,7 +85,43 @@ func doMap(reply *MapReduceReply ,mapf func(string, string) []KeyValue ) {
 }
 
 func doReduce(reply *MapReduceReply, reducef func(string, []string) string) {
+	intermediate := []KeyValue{}
+	task := reply.Task
+	for _, filename := range task.ReduceFiles {
+		ofile, _ := os.Open(filename)
+		dec := json.NewDecoder(ofile)
+		for {
+				var kv KeyValue
+				if err := dec.Decode(&kv); err != nil {
+					break
+				}
+				intermediate = append(intermediate, kv)
+		}
+		ofile.Close()
+	}
 
+	sort.Sort(ByKey(intermediate))
+
+	resname := fmt.Sprintf("mr-out-%d", task.Index)
+	resfile , _ := os.Create(resname)
+
+	i := 0
+	for i < len(intermediate) {
+		j := i + 1
+		for j < len(intermediate) && intermediate[j].Key == intermediate[i].Key {
+			j ++
+		}
+		values := []string{}
+		for k := i; k < j ; k ++ {
+			values = append(values, intermediate[k].Value)
+		}
+
+		output := reducef(intermediate[i].Key, values)
+
+		fmt.Fprintf(resfile, "%v %v\n", intermediate[i].Key, output)
+		i = j
+	}
+	resfile.Close()
 }
 //
 // main/mrworker.go calls this function.
