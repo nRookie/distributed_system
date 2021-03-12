@@ -77,7 +77,7 @@ func doMap(reply *MapReduceReply ,mapf func(string, string) []KeyValue ) {
 	argsFinish := MapReduceArgs{MessageType: FinishTask}
 
 
-	res := call("Master.WorkerCallHandler", &argsFinish, &reply)
+	res := call("Coordinator.WorkerCallHandler", &argsFinish, &reply)
 
 	if res == false {
 		return 
@@ -135,7 +135,7 @@ func Worker(mapf func(string, string) []KeyValue,
 		args := MapReduceArgs{MessageType: RequestTask}
 		reply := MapReduceReply{}
 
-		res := call("Master.WorkerCallHandler", &args, &reply)
+		res := call("Coordinator.WorkerCallHandler", &args, &reply)
 		if !res {
 			break;
 		}
