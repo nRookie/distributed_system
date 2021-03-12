@@ -59,6 +59,7 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 					task.Type ="Map"
 					task.Timestamp = time.Now()
 					reply.Task = task
+					reply.NReduce = c.nReduce
 					return nil
 				}
 			}
