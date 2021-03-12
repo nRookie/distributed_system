@@ -7,6 +7,8 @@ import "net/rpc"
 import "net/http"
 import "sync"
 import "time"
+import "strings"
+import "strconv"
 
 type MapReduceTask struct {
 	Type string // "Map", "Reduce", "Wait"
@@ -82,6 +84,17 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 		// check if the worker is the last worker who we assigned the task.
 		if (task.Status == 1 && time.Since(task.Timestamp).Seconds() < 10) {
 			task.Status = 2
+			if task.Type == "Map" {
+				// TODO: need to use temporary file name
+				for _ , filename := range task.ReduceFiles {
+					s := strings.Split(filename, "-")
+					index, err := strconv.Atoi(s[2])
+					if err != nil {
+						log.Fatalf("failed to convert %s to integer ", s[2])
+					}
+					c.reduceTasks[index].ReduceFiles = append(c.reduceTasks[index].ReduceFiles, filename)
+				}
+			}
 		}
 
 		c.mapFinished = true
