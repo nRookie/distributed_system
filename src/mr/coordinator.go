@@ -46,6 +46,9 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 }
 
 func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceReply) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	if (args.MessageType == RequestTask) {
 
 		if (c.mapFinished == false) {
