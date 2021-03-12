@@ -14,6 +14,21 @@ import "strconv"
 // and reply for an RPC.
 //
 
+const (
+	ReduceTask = iota // request task from the master
+	FinishTask			// commit the finished task to the master for updaing task list.
+)
+
+type MapReduceArgs struct {
+	MessageType int
+	Task  MapReduceTask
+}
+
+type MapReduceReply struct {
+	Task MapReduceTask
+	NReduce int
+}
+
 type ExampleArgs struct {
 	X int
 }

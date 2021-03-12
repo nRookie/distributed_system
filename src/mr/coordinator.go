@@ -5,11 +5,30 @@ import "net"
 import "os"
 import "net/rpc"
 import "net/http"
+import "sync"
+import "time"
 
+type MapReduceTask struct {
+	Type string // "Map", "Reduce", "Wait"
+	Status int // "Unassigned", "Assigned", "Finished"
+	Index  int // Index of the task
+	Timestamp  time.Time   // Start time
+	MapFile    string      // Files for map task
+	ReduceFiles      [] string  // List of files for reduce task.
+}
 
 type Coordinator struct {
 	// Your definitions here.
+	files []string
+	nReduce int
+	
+	mapTasks []MapReduceTask
+	reduceTasks []MapReduceTask
 
+	mapFinished bool
+	reduceFinished bool
+
+	mutex sync.Mutex
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -59,12 +78,32 @@ func (c *Coordinator) Done() bool {
 // main/mrcoordinator.go calls this function.
 // nReduce is the number of reduce tasks to use.
 //
+
+
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 
 	// Your code here.
+	taskID := 0
+	for _, filename := range files {
+		var task MapReduceTask
+		c.files = append(c.files, filename)
+		task.MapFile = filename
+		task.Index = taskID
+		task.Type = "Map"
+		task.Status = 0
+		c.mapTasks = append(c.mapTasks, task)
+		taskID ++
+	}
+	c.nReduce = nReduce
 
-
+	for i := 0; i < nReduce; i++ {
+		var task MapReduceTask
+		task.Index = taskID
+		task.Type = "Reduce"
+		task.Status = 0
+		taskID ++ 
+	}
 	c.server()
 	return &c
 }
