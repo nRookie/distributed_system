@@ -160,25 +160,25 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 
 	// Your code here.
-	taskID := 0
-	for _, filename := range files {
+
+	for i, filename := range files {
 		var task MapReduceTask
 		c.files = append(c.files, filename)
 		task.MapFile = filename
-		task.Index = taskID
+		task.Index = i
 		task.Type = "Map"
 		task.Status = 0
 		c.mapTasks = append(c.mapTasks, task)
-		taskID ++
 	}
 	c.nReduce = nReduce
 
 	for i := 0; i < nReduce; i++ {
 		var task MapReduceTask
-		task.Index = taskID
+		task.Index = i
 		task.Type = "Reduce"
 		task.Status = 0
-		taskID ++ 
+		c.reduceTasks = append(c.reduceTasks, task)
+
 	}
 	c.server()
 	return &c
