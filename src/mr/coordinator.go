@@ -56,7 +56,7 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 
 			for i, task := range c.mapTasks {
 				fmt.Printf("timeout is %f \n", time.Since(task.Timestamp).Seconds())
-				if (task.Status == 0 || (task.Status == 1 && (time.Since(task.Timestamp).Seconds()  > 10 ))) {
+				if (task.Status == 0 || (task.Status == 1 && (time.Since(task.Timestamp).Seconds()  > 60 ))) {
 					c.mapTasks[i].Status = 1
 					c.mapTasks[i].Type ="Map"
 					c.mapTasks[i].Timestamp = time.Now()
@@ -73,7 +73,7 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 			return nil
 		} else if c.reduceFinished == false {
 			for i, task := range c.reduceTasks {
-				if task.Status == 0 || (task.Status == 1 && time.Since(task.Timestamp).Seconds()  > 10) {
+				if task.Status == 0 || (task.Status == 1 && time.Since(task.Timestamp).Seconds()  > 60) {
 					c.reduceTasks[i].Status = 1
 					c.reduceTasks[i].Type ="Reduce"
 					c.reduceTasks[i].Timestamp = time.Now()
@@ -143,7 +143,8 @@ func (c *Coordinator) server() {
 //
 func (c *Coordinator) Done() bool {
 	ret := false
-
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	// Your code here.
 	if (c.mapFinished && c.reduceFinished) {
 		ret = true
