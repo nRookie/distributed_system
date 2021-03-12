@@ -15,7 +15,7 @@ import "strconv"
 //
 
 const (
-	ReduceTask = iota // request task from the master
+	RequestTask  = iota // request task from the master
 	FinishTask			// commit the finished task to the master for updaing task list.
 )
 

@@ -43,6 +43,63 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	return nil
 }
 
+func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceReply) error {
+	if (args.MessageType == RequestTask) {
+
+		if (c.mapFinished == false) {
+
+			for _, task := range c.mapTasks {
+				if task.Status == 0 || (task.Status == 1 && time.Since(task.Timestamp).Seconds()  > 10) {
+					task.Status = 1
+					task.Type ="Map"
+					task.Timestamp = time.Now()
+					reply.Task = task
+					return nil
+				}
+			}
+			// map process is not finished we have to wait
+			var task MapReduceTask
+			task.Type = "Wait"
+			reply.Task = task
+			return nil
+		} else if c.reduceFinished == false {
+			for _, task := range c.reduceTasks {
+				if task.Status == 0 || (task.Status == 1 && time.Since(task.Timestamp).Seconds()  > 10) {
+					task.Status = 1
+					task.Type ="Reduce"
+					task.Timestamp = time.Now()
+					reply.Task = task
+					return nil
+				}
+			}
+			var task MapReduceTask
+			task.Type = "Wait"
+			reply.Task = task
+			return nil
+		}
+	} else { // Finished Task
+		task := args.Task
+		// check if the worker is the last worker who we assigned the task.
+		if (task.Status == 1 && time.Since(task.Timestamp).Seconds() < 10) {
+			task.Status = 2
+		}
+
+		c.mapFinished = true
+		for _, task := range c.mapTasks {
+			if (task.Status != 2) {
+				c.mapFinished = false 
+			}
+		}
+		c.reduceFinished = true
+		for _, task := range c.reduceTasks {
+			if (task.Status != 2) {
+				c.reduceFinished = false
+			} 
+		}
+	}
+	return nil
+}
+
 
 //
 // start a thread that listens for RPCs from worker.go
@@ -68,7 +125,9 @@ func (c *Coordinator) Done() bool {
 	ret := false
 
 	// Your code here.
-
+	if (c.mapFinished && c.reduceFinished) {
+		ret = true
+	}
 
 	return ret
 }
