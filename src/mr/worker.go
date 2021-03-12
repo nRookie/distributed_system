@@ -6,8 +6,8 @@ import "net/rpc"
 import "hash/fnv"
 import "time"
 import "os"
-import "sort"
-import "ioutil"
+import "encoding/json"
+import "io/ioutil"
 //
 // Map functions return a slice of KeyValue.
 //
@@ -52,9 +52,10 @@ func doMap(reply *MapReduceReply ,mapf func(string, string) []KeyValue ) {
 	files := []*os.File{} // declare a list of file pointers
 
 	for i := 0; i < reply.NReduce ; i ++ {
-		oname := fmt.Sprintf("mr-%d-%d", task.taskID, i)
+		oname := fmt.Sprintf("mr-%d-%d", task.Index, i)
 		ofile, _ := os.Create(oname)
 		files = append(files, ofile)
+		task.ReduceFiles = append(task.ReduceFiles, oname) // append the filenames  into reduce file list
 	}
 
 	for _, kv := range intermediate {
@@ -67,10 +68,15 @@ func doMap(reply *MapReduceReply ,mapf func(string, string) []KeyValue ) {
 			return
 		}
 	}
+
 	argsFinish := MapReduceArgs{MessageType: FinishTask}
 
 
 	res := call("Master.WorkerCallHandler", &argsFinish, &reply)
+
+	if res == false {
+		return 
+	}
 }
 
 func doReduce(reply *MapReduceReply, reducef func(string, []string) string) {
