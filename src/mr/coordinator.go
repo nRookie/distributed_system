@@ -56,7 +56,7 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 
 			for i, task := range c.mapTasks {
 				// fmt.Printf("timeout is %f \n", time.Since(task.Timestamp).Seconds())
-				if (task.Status == 0 || (task.Status == 1 && (time.Since(task.Timestamp).Seconds()  > 300 ))) {
+				if (task.Status == 0 || (task.Status == 1 && (time.Since(task.Timestamp).Seconds()  > 10 ))) {
 					c.mapTasks[i].Status = 1
 					c.mapTasks[i].Type = "Map"
 					c.mapTasks[i].Timestamp = time.Now()
@@ -73,7 +73,7 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 			return nil
 		} else if c.reduceFinished == false {
 			for i, task := range c.reduceTasks {
-				if task.Status == 0 || (task.Status == 1 && time.Since(task.Timestamp).Seconds()  > 300 ) {
+				if task.Status == 0 || (task.Status == 1 && time.Since(task.Timestamp).Seconds()  > 10 ) {
 					c.reduceTasks[i].Status = 1
 					c.reduceTasks[i].Type ="Reduce"
 					c.reduceTasks[i].Timestamp = time.Now()
@@ -90,7 +90,7 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 		task := args.Task
 		// check if the worker is the last worker who we assigned the task.
 		fmt.Printf("task type is :%s\n", task.Type)
-		if (task.Status == 1 && (time.Since(task.Timestamp).Seconds() < 300) ) {
+		if (task.Status == 1 && (time.Since(task.Timestamp).Seconds() < 10) ) {
 			fmt.Printf("task type is :%s %s\n", task.Type, "Map")
 			if task.Type == "Map" {
 				c.mapTasks[task.Index].Status = 2
