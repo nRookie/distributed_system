@@ -11,7 +11,7 @@ import "fmt"
 
 type Coordinator struct {
 	// Your definitions here.
-	Filenames map[string]bool   //// 0 idle, 1 in-progress, 2 completed.
+	Filenames map[string]int   //// 0 idle, 1 in-progress, 2 completed.
 	MapTaskNum  int
 	ReduceTaskNum int
 	MapTaskResult []int
@@ -43,10 +43,10 @@ func (c *Coordinator) MapReduceHandler(args *MapArgs, reply *MapReply ) error {
 		reply.TaskID = c.CurrentMapTaskNum
 		c.CurrentMapTaskNum ++
 		reply.WorkerType = 0
-		for filename, used := range c.Filenames {
-			if used == false {
-				c.Filenames[filename] = true
-				fmt.Printf("serve %s filename status:%t", filename, c.Filenames[filename])
+		for filename, status := range c.Filenames {
+			if status == 0 {
+				c.Filenames[filename] = 1
+				fmt.Printf("serve %s filename status:%d", filename, c.Filenames[filename])
 				reply.Filename = filename
 				return nil
 			}
@@ -109,10 +109,11 @@ func (c *Coordinator) Poll(args *PollArgs, reply *PollReply ) error {
 }
 
 // Map worker use this method to tell coordinator how many map task has finshied
-func (c *Coordinator) Indicate(args *PollArgs, reply *PollReply ) error {
+func (c *Coordinator) Indicate(args *IndicateArgs, reply *IndicateReply ) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.CompletedMapTaskNum ++
+	c.Filenames[args.Filename] = 2
 	return nil
 }
 
@@ -125,12 +126,12 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 	
 	// Your code here.
-	c.Filenames = make(map[string]bool)
+	c.Filenames = make(map[string]int)
 	for _, filename := range files {
-		c.Filenames[filename] = false
+		c.Filenames[filename] = 0
 	}
-	for filename, used := range c.Filenames {
-		fmt.Printf("%s , %t \n", filename, used)
+	for filename, status := range c.Filenames {
+		fmt.Printf("%s , %d \n", filename, status)
 	}
 	c.MapTaskNum = len(c.Filenames)
 	c.ReduceTaskNum = nReduce

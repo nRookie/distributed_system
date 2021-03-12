@@ -92,9 +92,9 @@ func Worker(mapf func(string, string) []KeyValue,
 					}
 				}
 
-				args := PollArgs{}
-				reply := PollReply{}
-
+				args := IndicateArgs{}
+				reply := IndicateReply{}
+				args.Filename = filename
 				call("Coordinator.Indicate", &args, &reply)
 
 			} else { // Reduce worker

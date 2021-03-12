@@ -43,6 +43,15 @@ type PollReply struct {
 	Finished bool
 }
 
+type IndicateArgs struct {
+	Filename string
+}
+
+type IndicateReply struct {
+
+}
+
+
 // Cook up a unique-ish UNIX-domain socket name
 // in /var/tmp, for the coordinator.
 // Can't use the current directory since
