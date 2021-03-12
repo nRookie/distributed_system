@@ -123,6 +123,14 @@ func doReduce(reply *MapReduceReply, reducef func(string, []string) string) {
 		i = j
 	}
 	resfile.Close()
+
+	argsFinish := MapReduceArgs{MessageType: FinishTask,Task: task}
+
+	res := call("Coordinator.WorkerCallHandler", &argsFinish, &reply)
+	fmt.Printf("Reduce task: %d  completed\n", task.Index)
+	if res == false {
+		return 
+	}
 }
 //
 // main/mrworker.go calls this function.
