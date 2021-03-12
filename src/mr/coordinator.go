@@ -11,7 +11,7 @@ import "fmt"
 
 type Coordinator struct {
 	// Your definitions here.
-	Filenames map[string]int   //// 0 idle, 1 in-progress, 2 completed.
+	MapTasks map[string]int   //// 0 idle, 1 in-progress, 2 completed.
 	MapTaskNum  int
 	ReduceTaskNum int
 	MapTaskResult []int
@@ -43,10 +43,10 @@ func (c *Coordinator) MapReduceHandler(args *MapArgs, reply *MapReply ) error {
 		reply.TaskID = c.CurrentMapTaskNum
 		c.CurrentMapTaskNum ++
 		reply.WorkerType = 0
-		for filename, status := range c.Filenames {
+		for filename, status := range c.MapTasks {
 			if status == 0 {
-				c.Filenames[filename] = 1
-				fmt.Printf("serve %s filename status:%d", filename, c.Filenames[filename])
+				c.MapTasks[filename] = 1
+				fmt.Printf("serve %s filename status:%d", filename, c.MapTasks[filename])
 				reply.Filename = filename
 				return nil
 			}
@@ -113,7 +113,7 @@ func (c *Coordinator) Indicate(args *IndicateArgs, reply *IndicateReply ) error 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.CompletedMapTaskNum ++
-	c.Filenames[args.Filename] = 2
+	c.MapTasks[args.Filename] = 2
 	return nil
 }
 
@@ -126,14 +126,14 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 	
 	// Your code here.
-	c.Filenames = make(map[string]int)
+	c.MapTasks = make(map[string]int)
 	for _, filename := range files {
-		c.Filenames[filename] = 0
+		c.MapTasks[filename] = 0
 	}
-	for filename, status := range c.Filenames {
+	for filename, status := range c.MapTasks {
 		fmt.Printf("%s , %d \n", filename, status)
 	}
-	c.MapTaskNum = len(c.Filenames)
+	c.MapTaskNum = len(c.MapTasks)
 	c.ReduceTaskNum = nReduce
 	c.Completed = false
 	c.CurrentMapTaskNum = 0
