@@ -5,7 +5,9 @@ import "log"
 import "net/rpc"
 import "hash/fnv"
 import "time"
-
+import "os"
+import "sort"
+import "ioutil"
 //
 // Map functions return a slice of KeyValue.
 //
@@ -25,7 +27,50 @@ func ihash(key string) int {
 }
 
 func doMap(reply *MapReduceReply ,mapf func(string, string) []KeyValue ) {
+	task := reply.Task
+	filename := task.MapFile 
 
+	intermediate := []KeyValue{}
+
+	file, err := os.Open(filename)
+
+	if err != nil {
+		log.Fatalf("cannot open %v", filename)
+	}
+
+	content, err := ioutil.ReadAll(file)
+
+	if err != nil {
+		log.Fatalf("cannot read %v", filename)
+	}
+
+	file.Close()
+
+	kva := mapf(filename, string(content))
+	intermediate = append(intermediate, kva...) // append one slice to another by three dots.
+
+	files := []*os.File{} // declare a list of file pointers
+
+	for i := 0; i < reply.NReduce ; i ++ {
+		oname := fmt.Sprintf("mr-%d-%d", task.taskID, i)
+		ofile, _ := os.Create(oname)
+		files = append(files, ofile)
+	}
+
+	for _, kv := range intermediate {
+		filenum := ihash(kv.Key) % reply.NReduce
+		enc := json.NewEncoder (files[filenum])
+		err := enc.Encode(&kv)
+		if err != nil {
+			fmt.Println("failed to save the intermediate file encode")
+			fmt.Println(err)
+			return
+		}
+	}
+	argsFinish := MapReduceArgs{MessageType: FinishTask}
+
+
+	res := call("Master.WorkerCallHandler", &argsFinish, &reply)
 }
 
 func doReduce(reply *MapReduceReply, reducef func(string, []string) string) {
