@@ -9,6 +9,7 @@ import "sync"
 import "time"
 import "strings"
 import "strconv"
+import "fmt"
 
 type MapReduceTask struct {
 	Type string // "Map", "Reduce", "Wait"
@@ -53,13 +54,15 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 
 		if (c.mapFinished == false) {
 
-			for _, task := range c.mapTasks {
-				if task.Status == 0 || (task.Status == 1 && time.Since(task.Timestamp).Seconds()  > 10) {
-					task.Status = 1
-					task.Type ="Map"
-					task.Timestamp = time.Now()
+			for i, task := range c.mapTasks {
+				fmt.Printf("timeout is %f \n", time.Since(task.Timestamp).Seconds())
+				if (task.Status == 0 || (task.Status == 1 && (time.Since(task.Timestamp).Seconds()  > 10 ))) {
+					c.mapTasks[i].Status = 1
+					c.mapTasks[i].Type ="Map"
+					c.mapTasks[i].Timestamp = time.Now()
 					reply.Task = task
 					reply.NReduce = c.nReduce
+					fmt.Printf("%d %d", task.Status, c.mapTasks[task.Index].Status )
 					return nil
 				}
 			}
@@ -69,11 +72,11 @@ func (c *Coordinator) WorkerCallHandler(args *MapReduceArgs, reply *MapReduceRep
 			reply.Task = task
 			return nil
 		} else if c.reduceFinished == false {
-			for _, task := range c.reduceTasks {
+			for i, task := range c.reduceTasks {
 				if task.Status == 0 || (task.Status == 1 && time.Since(task.Timestamp).Seconds()  > 10) {
-					task.Status = 1
-					task.Type ="Reduce"
-					task.Timestamp = time.Now()
+					c.reduceTasks[i].Status = 1
+					c.reduceTasks[i].Type ="Reduce"
+					c.reduceTasks[i].Timestamp = time.Now()
 					reply.Task = task
 					return nil
 				}
@@ -168,6 +171,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 		task.Index = i
 		task.Type = "Map"
 		task.Status = 0
+		fmt.Printf("initializing maptask: %d\n", task.Index)
 		c.mapTasks = append(c.mapTasks, task)
 	}
 	c.nReduce = nReduce
@@ -177,8 +181,8 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 		task.Index = i
 		task.Type = "Reduce"
 		task.Status = 0
+		fmt.Printf("initializing reducetask: %d\n", task.Index)
 		c.reduceTasks = append(c.reduceTasks, task)
-
 	}
 	c.server()
 	return &c
