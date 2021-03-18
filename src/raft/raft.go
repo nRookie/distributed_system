@@ -153,6 +153,10 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 //
 type RequestVoteArgs struct {
 	// Your data here (2A, 2B).
+	term    int //  candidate's term
+	candidateId int  // candidate requesting vote 
+	lastLogIndex      int // index of candidate's last log entry
+	lastLogTerm        int // term of candidate's last log entry
 }
 
 //
@@ -161,6 +165,8 @@ type RequestVoteArgs struct {
 //
 type RequestVoteReply struct {
 	// Your data here (2A).
+	term       int  // currentTerm, for candidate to update itself
+	voteGranted    bool // true means candidate received vote
 }
 
 //
