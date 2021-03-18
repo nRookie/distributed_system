@@ -183,6 +183,17 @@ type RequestVoteReply struct {
 //
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
+	if args.Term < rf.currentTerm {
+		return
+	}
+	// -1 indicates none
+	if rf.votedFor == -1 {
+		rf.votedFor = args.CandidateId
+		reply.VoteGranted = true
+	} else if rf.votedFor == args.CandidateId && args.LastLogIndex >= len(rf.log) - 1{
+		rf.votedFor = args.CandidateId
+		reply.VoteGranted = true
+	}
 }
 
 //
@@ -276,7 +287,7 @@ func (rf *Raft) ticker() {
 		// time.Sleep().
 		args := RequestVoteArgs{}
 		reply := RequestVoteReply{}
-
+		voteCount := 1
 		args.Term = rf.currentTerm
 		args.CandidateId = rf.me
 		args.LastLogIndex = len(rf.log) - 1
@@ -289,6 +300,12 @@ func (rf *Raft) ticker() {
 				ok := rf.peers[i].Call("Raft.RequestVote", &args, &reply)
 				if !ok {
 					break
+				}
+				if reply.VoteGranted {
+					voteCount ++
+					if voteCount > (len(rf.peers) + 1) / 2 {
+						break // becomes the leader
+					}
 				}
 			}
 		}
@@ -312,7 +329,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.peers = peers
 	rf.persister = persister
 	rf.me = me
-
+	rf.votedFor = -1
 	// Your initialization code here (2A, 2B, 2C).
 
 	// initialize from state persisted before a crash
@@ -326,6 +343,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 		go rf.ticker()
 	}
  
+	// already have a leader.
 
 
 	return rf
