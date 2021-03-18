@@ -21,7 +21,7 @@ import (
 //	"bytes"
 	"sync"
 	"sync/atomic"
-
+	"time"
 //	"6.824/labgob"
 	"6.824/labrpc"
 )
@@ -64,7 +64,7 @@ type Raft struct {
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
 	currentTerm    int       // latest term server has seen(initialized to 0 on first boot, increase monotonically)
-	votedFor       string       // candidateID that received vote in current term
+	votedFor       int       // candidateID that received vote in current term
 	log            []string     // log entries
 
 	commitIndex    int           // index of highest log entry known to be committed.
@@ -74,6 +74,10 @@ type Raft struct {
 	// leader state
 	nextIndex      []int        //
 	matchIndex      []int       //
+
+	// leader election
+	electionTimeout  int 
+	heartbeatReceivedTimestamp time.Time
 }
 
 // return currentTerm and whether this server
@@ -265,7 +269,23 @@ func (rf *Raft) ticker() {
 		// Your code here to check if a leader election should
 		// be started and to randomize sleeping time using
 		// time.Sleep().
+		args := RequestVoteArgs{}
+		reply := RequestVoteReply{}
 
+		args.term = rf.currentTerm
+		args.candidateId = rf.me
+		args.lastLogIndex = len(rf.log)
+		// args.lastLogTerm =  TODO: log entry should contain the term
+
+		//
+		for i, _ := range rf.peers {
+			if i != rf.me {
+				ok := rf.peers[i].Call("Raft.RequestVote", args, reply)
+				if !ok {
+					break
+				}
+			}
+		}
 	}
 }
 
@@ -293,7 +313,13 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.readPersist(persister.ReadRaftState())
 
 	// start ticker goroutine to start elections
-	go rf.ticker()
+	if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 150 {
+		time.Sleep(10) // TODO: change this to random time.
+		rf.currentTerm += 1
+		rf.votedFor = me // vote for itself
+		go rf.ticker()
+	}
+ 
 
 
 	return rf
