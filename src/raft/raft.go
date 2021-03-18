@@ -65,7 +65,7 @@ type Raft struct {
 	// state a Raft server must maintain.
 	currentTerm    int       // latest term server has seen(initialized to 0 on first boot, increase monotonically)
 	votedFor       int       // candidateID that received vote in current term
-	log            []string     // log entries
+	log            []LogEntry     // log entries
 
 	commitIndex    int           // index of highest log entry known to be committed.
 	lastApplied     int          // index of highest log entry applied to state machine
@@ -151,16 +151,21 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 }
 
 
+type LogEntry struct{
+	Command string
+	Term    int
+}
+
 //
 // example RequestVote RPC arguments structure.
 // field names must start with capital letters!
 //
 type RequestVoteArgs struct {
 	// Your data here (2A, 2B).
-	term    int //  candidate's term
-	candidateId int  // candidate requesting vote 
-	lastLogIndex      int // index of candidate's last log entry
-	lastLogTerm        int // term of candidate's last log entry
+	Term    int //  candidate's term
+	CandidateId int  // candidate requesting vote 
+	LastLogIndex      int // index of candidate's last log entry
+	LastLogTerm        int // term of candidate's last log entry
 }
 
 //
@@ -169,8 +174,8 @@ type RequestVoteArgs struct {
 //
 type RequestVoteReply struct {
 	// Your data here (2A).
-	term       int  // currentTerm, for candidate to update itself
-	voteGranted    bool // true means candidate received vote
+	Term       int  // currentTerm, for candidate to update itself
+	VoteGranted    bool // true means candidate received vote
 }
 
 //
@@ -272,15 +277,16 @@ func (rf *Raft) ticker() {
 		args := RequestVoteArgs{}
 		reply := RequestVoteReply{}
 
-		args.term = rf.currentTerm
-		args.candidateId = rf.me
-		args.lastLogIndex = len(rf.log)
-		// args.lastLogTerm =  TODO: log entry should contain the term
-
+		args.Term = rf.currentTerm
+		args.CandidateId = rf.me
+		args.LastLogIndex = len(rf.log) - 1
+		if args.LastLogIndex >= 0  {
+			args.LastLogTerm =  rf.log[args.LastLogIndex].Term
+		}
 		//
 		for i, _ := range rf.peers {
 			if i != rf.me {
-				ok := rf.peers[i].Call("Raft.RequestVote", args, reply)
+				ok := rf.peers[i].Call("Raft.RequestVote", &args, &reply)
 				if !ok {
 					break
 				}
