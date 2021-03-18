@@ -156,6 +156,19 @@ type LogEntry struct{
 	Term    int
 }
 
+type AppendEntriesArgs struct {
+ 
+}
+
+//
+// example RequestVote RPC reply structure.
+// field names must start with capital letters!
+//
+type AppendEntriesReply struct {
+
+}
+
+
 //
 // example RequestVote RPC arguments structure.
 // field names must start with capital letters!
@@ -194,6 +207,14 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		rf.votedFor = args.CandidateId
 		reply.VoteGranted = true
 	}
+}
+
+func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
+	// for i, _ := range rf.peers {
+	// 	if i != rf.me {
+	// 		rf.peers[i].
+	// 	}
+	// }
 }
 
 //
