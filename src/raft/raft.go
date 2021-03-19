@@ -210,11 +210,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 }
 
 func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
-	// for i, _ := range rf.peers {
-	// 	if i != rf.me {
-	// 		rf.peers[i].
-	// 	}
-	// }
+	rf.heartbeatReceivedTimestamp = time.Now()
 }
 
 //
@@ -333,6 +329,21 @@ func (rf *Raft) ticker() {
 	}
 }
 
+func (rf *Raft) leading() {
+
+	for true { // currently make an infinitely running leader. TODO: consider when this go routine should stop
+		for i, _ := range rf.peers {
+			if i != rf.me {
+				args := AppendEntriesArgs{}
+				reply := AppendEntriesReply{}
+				ok := rf.peers[i].Call("Raft.AppendEntries", &args, &reply)
+				if !ok {
+
+				}
+			}
+		}
+	}
+}
 //
 // the service or tester wants to create a Raft server. the ports
 // of all the Raft servers (including this one) are in peers[]. this
