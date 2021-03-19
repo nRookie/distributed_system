@@ -90,7 +90,7 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isleader bool
 	// Your code here (2A).
-	if rf.votedFor == rf.me {
+	if rf.isLeader {
 		isleader = true
 	}
 	term = rf.currentTerm
