@@ -71,7 +71,7 @@ type Raft struct {
 
 	commitIndex    int           // index of highest log entry known to be committed.
 	lastApplied     int          // index of highest log entry applied to state machine
-
+	isLeader       bool
 
 	// leader state
 	nextIndex      []int        //
@@ -210,6 +210,9 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		reply.VoteGranted = false
 		return
 	}
+
+	rf.currentTerm = args.Term
+	rf.isLeader = false // change status to follower
 	// -1 indicates none
 	if rf.votedFor == -1 {
 		rf.votedFor = args.CandidateId
@@ -226,6 +229,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 	rf.heartbeatReceivedTimestamp = time.Now()
+	rf.isLeader = false
 }
 
 //
@@ -399,14 +403,18 @@ func (rf *Raft) startElection() {
 	rf.mu.Lock()
 	args := RequestVoteArgs{}
 	reply := RequestVoteReply{}
-	voteCount := 1
+	voteCount := 1     // vote for self
+	rf.votedFor = rf.me
+	rf.currentTerm ++ // increment current term
+	rf.heartbeatReceivedTimestamp = time.Now() // reset election timer
 	args.Term = rf.currentTerm
 	args.CandidateId = rf.me
 	args.LastLogIndex = len(rf.log) - 1
 	if args.LastLogIndex >= 0  {
 		args.LastLogTerm =  rf.log[args.LastLogIndex].Term
 	}
-	//
+	rf.isLeader = false
+	// send RequestVoteRPCs to all other servers
 	for i, _ := range rf.peers {
 		if i != rf.me {
 			rf.mu.Unlock()
@@ -418,8 +426,9 @@ func (rf *Raft) startElection() {
 			if reply.VoteGranted {
 				voteCount ++
 				if voteCount > (len(rf.peers) + 1) / 2 {
+					// if vote received from majority of servers: become leader
 					fmt.Printf("%d: becomes the leader", rf.me)
-					rf.currentTerm ++
+					rf.isLeader = true
 					break // becomes the leader
 				}
 			}
