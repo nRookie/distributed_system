@@ -306,29 +306,11 @@ func (rf *Raft) ticker() {
 		// Your code here to check if a leader election should
 		// be started and to randomize sleeping time using
 		// time.Sleep().
-		args := RequestVoteArgs{}
-		reply := RequestVoteReply{}
-		voteCount := 1
-		args.Term = rf.currentTerm
-		args.CandidateId = rf.me
-		args.LastLogIndex = len(rf.log) - 1
-		if args.LastLogIndex >= 0  {
-			args.LastLogTerm =  rf.log[args.LastLogIndex].Term
-		}
-		//
-		for i, _ := range rf.peers {
-			if i != rf.me {
-				ok := rf.peers[i].Call("Raft.RequestVote", &args, &reply)
-				if !ok {
-					break
-				}
-				if reply.VoteGranted {
-					voteCount ++
-					if voteCount > (len(rf.peers) + 1) / 2 {
-						break // becomes the leader
-					}
-				}
-			}
+		if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 150 {
+			time.Sleep(10) // TODO: change this to random time.
+			rf.currentTerm += 1
+			rf.votedFor = rf.me // vote for itself
+			go rf.startElection()
 		}
 	}
 }
@@ -372,15 +354,38 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.readPersist(persister.ReadRaftState())
 
 	// start ticker goroutine to start elections
-	if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 150 {
-		time.Sleep(10) // TODO: change this to random time.
-		rf.currentTerm += 1
-		rf.votedFor = me // vote for itself
-		go rf.ticker()
-	}
- 
-	// already have a leader.
+	go rf.ticker()
 
+
+	
 
 	return rf
+}
+
+
+func (rf *Raft) startElection() {
+	args := RequestVoteArgs{}
+	reply := RequestVoteReply{}
+	voteCount := 1
+	args.Term = rf.currentTerm
+	args.CandidateId = rf.me
+	args.LastLogIndex = len(rf.log) - 1
+	if args.LastLogIndex >= 0  {
+		args.LastLogTerm =  rf.log[args.LastLogIndex].Term
+	}
+	//
+	for i, _ := range rf.peers {
+		if i != rf.me {
+			ok := rf.peers[i].Call("Raft.RequestVote", &args, &reply)
+			if !ok {
+				break
+			}
+			if reply.VoteGranted {
+				voteCount ++
+				if voteCount > (len(rf.peers) + 1) / 2 {
+					break // becomes the leader
+				}
+			}
+		}
+	}
 }
