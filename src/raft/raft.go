@@ -205,7 +205,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 	// Your code here (2A, 2B).
-	fmt.Printf("currentTerm:%d  term:%d \n", rf.currentTerm, args.Term)
+	// fmt.Printf("currentTerm:%d  term:%d \n", rf.currentTerm, args.Term)
 	if args.Term < rf.currentTerm {
 		reply.VoteGranted = false
 		return
@@ -335,8 +335,6 @@ func (rf *Raft) ticker() {
 				rf.mu.Unlock()
 				time.Sleep(time.Duration(n)*time.Millisecond) // TODO: change this to random time.
 				rf.mu.Lock()
-				rf.currentTerm += 1
-				rf.votedFor = rf.me // vote for itself
 				fmt.Printf("%d: starts a new election\n", rf.me)
 				rf.mu.Unlock()
 				rf.startElection()
