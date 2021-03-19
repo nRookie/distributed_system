@@ -201,6 +201,8 @@ type RequestVoteReply struct {
 // example RequestVote RPC handler.
 //
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	// Your code here (2A, 2B).
 	if args.Term < rf.currentTerm {
 		return
@@ -216,6 +218,8 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 }
 
 func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	rf.heartbeatReceivedTimestamp = time.Now()
 }
 
@@ -312,16 +316,14 @@ func (rf *Raft) ticker() {
 
 		if term ,leader := rf.GetState(); leader {
 			fmt.Printf("current term is %d\n", term)
-			rf.mu.Lock()
-			defer rf.mu.Unlock()
 			rf.leading()
 		} else if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 150 {
 			time.Sleep(10) // TODO: change this to random time.
 			rf.mu.Lock()
-			defer rf.mu.Unlock()
 			rf.currentTerm += 1
 			rf.votedFor = rf.me // vote for itself
 			fmt.Printf("%d: starts a new election\n", rf.me)
+			rf.mu.Unlock()
 			rf.startElection()
 		}
 	}
@@ -391,16 +393,20 @@ func (rf *Raft) startElection() {
 	//
 	for i, _ := range rf.peers {
 		if i != rf.me {
+			rf.mu.Unlock()
 			ok := rf.peers[i].Call("Raft.RequestVote", &args, &reply)
+			rf.mu.Lock()
 			if !ok {
 				break
 			}
 			if reply.VoteGranted {
 				voteCount ++
 				if voteCount > (len(rf.peers) + 1) / 2 {
+					fmt.Printf("%d: becomes the leader", rf.me)
 					break // becomes the leader
 				}
 			}
 		}
 	}
+	fmt.Printf("%d: election end\n", rf.me)
 }
