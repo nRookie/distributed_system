@@ -303,19 +303,26 @@ func (rf *Raft) killed() bool {
 // The ticker go routine starts a new election if this peer hasn't received
 // heartsbeats recently.
 func (rf *Raft) ticker() {
-	rf.mu.Lock()
-	defer rf.mu.Unlock()
+ 
 	for rf.killed() == false {
 
 		// Your code here to check if a leader election should
 		// be started and to randomize sleeping time using
 		// time.Sleep().
-		if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 150 {
+
+		if term ,leader := rf.GetState(); leader {
+			fmt.Printf("current term is %d\n", term)
+			rf.mu.Lock()
+			defer rf.mu.Unlock()
+			rf.leading()
+		} else if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 150 {
 			time.Sleep(10) // TODO: change this to random time.
+			rf.mu.Lock()
+			defer rf.mu.Unlock()
 			rf.currentTerm += 1
 			rf.votedFor = rf.me // vote for itself
 			fmt.Printf("%d: starts a new election\n", rf.me)
-			go rf.startElection()
+			rf.startElection()
 		}
 	}
 }
