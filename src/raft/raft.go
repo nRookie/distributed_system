@@ -22,6 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"fmt"
 //	"6.824/labgob"
 	"6.824/labrpc"
 )
@@ -83,7 +84,8 @@ type Raft struct {
 // return currentTerm and whether this server
 // believes it is the leader.
 func (rf *Raft) GetState() (int, bool) {
-
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	var term int
 	var isleader bool
 	// Your code here (2A).
@@ -301,6 +303,8 @@ func (rf *Raft) killed() bool {
 // The ticker go routine starts a new election if this peer hasn't received
 // heartsbeats recently.
 func (rf *Raft) ticker() {
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	for rf.killed() == false {
 
 		// Your code here to check if a leader election should
@@ -343,6 +347,7 @@ func (rf *Raft) leading() {
 //
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
+	fmt.Println("Make is called")
 	rf := &Raft{}
 	rf.peers = peers
 	rf.persister = persister
@@ -364,6 +369,8 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 
 func (rf *Raft) startElection() {
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	args := RequestVoteArgs{}
 	reply := RequestVoteReply{}
 	voteCount := 1
