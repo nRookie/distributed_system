@@ -314,6 +314,7 @@ func (rf *Raft) ticker() {
 			time.Sleep(10) // TODO: change this to random time.
 			rf.currentTerm += 1
 			rf.votedFor = rf.me // vote for itself
+			fmt.Printf("%d: starts a new election\n", rf.me)
 			go rf.startElection()
 		}
 	}
@@ -347,7 +348,7 @@ func (rf *Raft) leading() {
 //
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
-	fmt.Println("Make is called")
+	fmt.Printf("Make is called %d\n", len(peers))
 	rf := &Raft{}
 	rf.peers = peers
 	rf.persister = persister
@@ -357,7 +358,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
-
+	rf.heartbeatReceivedTimestamp = time.Now()
 	// start ticker goroutine to start elections
 	go rf.ticker()
 
