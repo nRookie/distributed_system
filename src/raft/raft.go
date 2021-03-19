@@ -23,6 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 	"fmt"
+	"math/rand"
 //	"6.824/labgob"
 	"6.824/labrpc"
 )
@@ -204,7 +205,9 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 	// Your code here (2A, 2B).
+	fmt.Printf("currentTerm:%d  term:%d \n", rf.currentTerm, args.Term)
 	if args.Term < rf.currentTerm {
+		reply.VoteGranted = false
 		return
 	}
 	// -1 indicates none
@@ -214,6 +217,8 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	} else if rf.votedFor == args.CandidateId && args.LastLogIndex >= len(rf.log) - 1{
 		rf.votedFor = args.CandidateId
 		reply.VoteGranted = true
+	} else {
+		reply.VoteGranted = false
 	}
 }
 
@@ -315,33 +320,45 @@ func (rf *Raft) ticker() {
 		// time.Sleep().
 
 		if term ,leader := rf.GetState(); leader {
-			fmt.Printf("current term is %d\n", term)
-			rf.leading()
-		} else if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 150 {
-			time.Sleep(10) // TODO: change this to random time.
 			rf.mu.Lock()
-			rf.currentTerm += 1
-			rf.votedFor = rf.me // vote for itself
-			fmt.Printf("%d: starts a new election\n", rf.me)
+			rf.currentTerm = term + 1
 			rf.mu.Unlock()
-			rf.startElection()
+			rf.leading()
+		} else {
+			rf.mu.Lock()
+			if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 150 {
+				n := rand.Intn(150)
+				rf.mu.Unlock()
+				time.Sleep(time.Duration(n)*time.Millisecond) // TODO: change this to random time.
+				rf.mu.Lock()
+				rf.currentTerm += 1
+				rf.votedFor = rf.me // vote for itself
+				fmt.Printf("%d: starts a new election\n", rf.me)
+				rf.mu.Unlock()
+				rf.startElection()
+				rf.mu.Lock()
+			}
+			rf.mu.Unlock()
 		}
+		
 	}
 }
 
 func (rf *Raft) leading() {
 
-	for true { // currently make an infinitely running leader. TODO: consider when this go routine should stop
+	{// currently make an infinitely running leader. TODO: consider when this go routine should stop
 		for i, _ := range rf.peers {
 			if i != rf.me {
 				args := AppendEntriesArgs{}
 				reply := AppendEntriesReply{}
+				time.Sleep(100)
 				ok := rf.peers[i].Call("Raft.AppendEntries", &args, &reply)
 				if !ok {
 
 				}
 			}
 		}
+		// fmt.Println("I'm leading now")
 	}
 }
 //
@@ -380,7 +397,6 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 func (rf *Raft) startElection() {
 	rf.mu.Lock()
-	defer rf.mu.Unlock()
 	args := RequestVoteArgs{}
 	reply := RequestVoteReply{}
 	voteCount := 1
@@ -403,10 +419,13 @@ func (rf *Raft) startElection() {
 				voteCount ++
 				if voteCount > (len(rf.peers) + 1) / 2 {
 					fmt.Printf("%d: becomes the leader", rf.me)
+					rf.currentTerm ++
 					break // becomes the leader
 				}
 			}
 		}
 	}
 	fmt.Printf("%d: election end\n", rf.me)
+	rf.mu.Unlock()
+	rf.ticker()
 }
