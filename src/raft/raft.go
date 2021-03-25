@@ -335,7 +335,7 @@ func (rf *Raft) ticker() {
 		} else {
 			rf.mu.Lock()
 			if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 1000 {
-				n := rand.Intn(150)
+				n := rand.Intn(100) + 150
 				rf.mu.Unlock()
 				time.Sleep(time.Duration(n)*time.Millisecond) // TODO: change this to random time.
 				rf.mu.Lock()
@@ -358,7 +358,7 @@ func (rf *Raft) leading() {
 				//fmt.Printf("%d sending appendentires to %d\n", rf.me, i)
 				args := AppendEntriesArgs{}
 				reply := AppendEntriesReply{}
-				time.Sleep(100)
+				time.Sleep(110)
 				ok := rf.peers[i].Call("Raft.AppendEntries", &args, &reply)
 				if !ok {
 
