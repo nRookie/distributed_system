@@ -71,7 +71,7 @@ type Raft struct {
 
 	commitIndex    int           // index of highest log entry known to be committed.
 	lastApplied     int          // index of highest log entry applied to state machine
-	isLeader       bool
+	isLeader       int           // 0 follower, 1 candidates, 2 leader
 
 	// leader state
 	nextIndex      []int        //
@@ -90,7 +90,7 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isleader bool
 	// Your code here (2A).
-	if rf.isLeader {
+	if rf.isLeader == 2 {
 		isleader = true
 	}
 	term = rf.currentTerm
@@ -212,7 +212,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	}
 
 	rf.currentTerm = args.Term
-	rf.isLeader = false // change status to follower
+	rf.isLeader = 0 // change status to follower
 	// -1 indicates none
 	if rf.votedFor == -1 {
 		rf.votedFor = args.CandidateId
@@ -230,7 +230,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 	defer rf.mu.Unlock()
 	fmt.Printf("append entires called\n")
 	rf.heartbeatReceivedTimestamp = time.Now()
-	rf.isLeader = false
+	rf.isLeader = 0
 }
 
 //
@@ -324,14 +324,14 @@ func (rf *Raft) ticker() {
 		// be started and to randomize sleeping time using
 		// time.Sleep().
 
-		if _ ,leader := rf.GetState(); leader {
+		if _ , leader := rf.GetState(); leader {
 			rf.mu.Lock()
 			// fmt.Printf("term is %d, num is : %d, leading\n", term, rf.me )
 			rf.leading()
 			rf.mu.Unlock()
 		} else {
 			rf.mu.Lock()
-			if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 150 {
+			if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 1000 {
 				n := rand.Intn(150)
 				rf.mu.Unlock()
 				time.Sleep(time.Duration(n)*time.Millisecond) // TODO: change this to random time.
@@ -414,7 +414,7 @@ func (rf *Raft) startElection() {
 	if args.LastLogIndex >= 0  {
 		args.LastLogTerm =  rf.log[args.LastLogIndex].Term
 	}
-	rf.isLeader = false
+	rf.isLeader = 1
 	// send RequestVoteRPCs to all other servers
 	for i, _ := range rf.peers {
 		if i != rf.me {
@@ -429,7 +429,7 @@ func (rf *Raft) startElection() {
 				if voteCount > (len(rf.peers) + 1) / 2 {
 					// if vote received from majority of servers: become leader
 					fmt.Printf("%d: becomes the leader", rf.me)
-					rf.isLeader = true
+					rf.isLeader = 2
 					break // becomes the leader
 				}
 			}
