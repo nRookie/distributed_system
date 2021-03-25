@@ -205,7 +205,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 	// Your code here (2A, 2B).
-	fmt.Printf("currentTerm:%d  term:%d \n", rf.currentTerm, args.Term)
+	// fmt.Printf("currentTerm:%d  term:%d \n", rf.currentTerm, args.Term)
 	if args.Term < rf.currentTerm {
 		reply.VoteGranted = 0
 		return
@@ -231,7 +231,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
-	fmt.Printf("append entires called\n")
+	//fmt.Printf("append entires called\n")
 	rf.heartbeatReceivedTimestamp = time.Now()
 	rf.isLeader = 0
 }
@@ -355,7 +355,7 @@ func (rf *Raft) leading() {
 	{// currently make an infinitely running leader. TODO: consider when this go routine should stop
 		for i, _ := range rf.peers {
 			if i != rf.me {
-				fmt.Printf("%d sending appendentires to %d\n", rf.me, i)
+				//fmt.Printf("%d sending appendentires to %d\n", rf.me, i)
 				args := AppendEntriesArgs{}
 				reply := AppendEntriesReply{}
 				time.Sleep(100)
