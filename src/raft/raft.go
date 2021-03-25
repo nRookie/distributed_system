@@ -210,6 +210,9 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		reply.VoteGranted = 0
 		return
 	}
+	if args.Term > rf.currentTerm {
+		rf.votedFor = -1
+	}
 
 	rf.currentTerm = args.Term
 	rf.isLeader = 0 // change status to follower
