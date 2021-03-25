@@ -195,7 +195,7 @@ type RequestVoteArgs struct {
 type RequestVoteReply struct {
 	// Your data here (2A).
 	Term       int  // currentTerm, for candidate to update itself
-	VoteGranted    bool // true means candidate received vote
+	VoteGranted    int // true means candidate received vote
 }
 
 //
@@ -205,9 +205,9 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 	// Your code here (2A, 2B).
-	// fmt.Printf("currentTerm:%d  term:%d \n", rf.currentTerm, args.Term)
+	fmt.Printf("currentTerm:%d  term:%d \n", rf.currentTerm, args.Term)
 	if args.Term < rf.currentTerm {
-		reply.VoteGranted = false
+		reply.VoteGranted = 0
 		return
 	}
 
@@ -216,18 +216,19 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// -1 indicates none
 	if rf.votedFor == -1 {
 		rf.votedFor = args.CandidateId
-		reply.VoteGranted = true
+		reply.VoteGranted = 1
 	} else if rf.votedFor == args.CandidateId && args.LastLogIndex >= len(rf.log) - 1{
 		rf.votedFor = args.CandidateId
-		reply.VoteGranted = true
+		reply.VoteGranted = 1
 	} else {
-		reply.VoteGranted = false
+		reply.VoteGranted = 0
 	}
 }
 
 func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
+	fmt.Printf("append entires called\n")
 	rf.heartbeatReceivedTimestamp = time.Now()
 	rf.isLeader = false
 }
@@ -323,11 +324,11 @@ func (rf *Raft) ticker() {
 		// be started and to randomize sleeping time using
 		// time.Sleep().
 
-		if term ,leader := rf.GetState(); leader {
+		if _ ,leader := rf.GetState(); leader {
 			rf.mu.Lock()
-			rf.currentTerm = term + 1
-			rf.mu.Unlock()
+			// fmt.Printf("term is %d, num is : %d, leading\n", term, rf.me )
 			rf.leading()
+			rf.mu.Unlock()
 		} else {
 			rf.mu.Lock()
 			if time.Since(rf.heartbeatReceivedTimestamp).Milliseconds() > 150 {
@@ -335,7 +336,7 @@ func (rf *Raft) ticker() {
 				rf.mu.Unlock()
 				time.Sleep(time.Duration(n)*time.Millisecond) // TODO: change this to random time.
 				rf.mu.Lock()
-				fmt.Printf("%d: starts a new election\n", rf.me)
+				fmt.Printf("%d: starts a new election term is : %d \n", rf.me, rf.currentTerm)
 				rf.mu.Unlock()
 				rf.startElection()
 				rf.mu.Lock()
@@ -351,6 +352,7 @@ func (rf *Raft) leading() {
 	{// currently make an infinitely running leader. TODO: consider when this go routine should stop
 		for i, _ := range rf.peers {
 			if i != rf.me {
+				fmt.Printf("%d sending appendentires to %d\n", rf.me, i)
 				args := AppendEntriesArgs{}
 				reply := AppendEntriesReply{}
 				time.Sleep(100)
@@ -401,6 +403,7 @@ func (rf *Raft) startElection() {
 	rf.mu.Lock()
 	args := RequestVoteArgs{}
 	reply := RequestVoteReply{}
+
 	voteCount := 1     // vote for self
 	rf.votedFor = rf.me
 	rf.currentTerm ++ // increment current term
@@ -421,7 +424,7 @@ func (rf *Raft) startElection() {
 			if !ok {
 				break
 			}
-			if reply.VoteGranted {
+			if reply.VoteGranted == 1 {
 				voteCount ++
 				if voteCount > (len(rf.peers) + 1) / 2 {
 					// if vote received from majority of servers: become leader
