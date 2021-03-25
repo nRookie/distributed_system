@@ -440,5 +440,4 @@ func (rf *Raft) startElection() {
 	}
 	fmt.Printf("%d: election end\n", rf.me)
 	rf.mu.Unlock()
-	rf.ticker()
 }
